@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'pages/profile_page.dart';
+import 'services/pref_service.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final prefService = await PrefService.init();
+  await prefService.increaseOpenCount();
+
+  runApp(MyApp(prefService: prefService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final PrefService prefService;
+
+  const MyApp({super.key, required this.prefService});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +24,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: ProfilePage(),
+      home: ProfilePage(prefService: prefService),
     );
   }
 }

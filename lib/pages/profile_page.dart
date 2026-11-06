@@ -1,138 +1,149 @@
 import 'package:flutter/material.dart';
 import '../models/profile_data.dart';
-import '../helpers/db_helper.dart'; // pastikan path helper SQLite kamu sesuai
 import '../services/pref_service.dart';
+import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
-  final PrefService prefService;
-  final bool isDarkMode;
-  final Function(bool) onThemeChanged;
-
   const ProfilePage({
     super.key,
-    required this.prefService,
-    required this.isDarkMode,
+    required this.prefs,
+    required this.isDark,
     required this.onThemeChanged,
   });
+
+  final PrefService prefs;
+  final bool isDark;
+  final ValueChanged<bool> onThemeChanged;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _nameController = TextEditingController();
-  final _roleController = TextEditingController();
-  final _bioController = TextEditingController();
-
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  int? _currentId;
-  bool _isLoading = true;
+  late ProfileData _profile;
 
   @override
   void initState() {
     super.initState();
-    _loadProfileData();
+    _profile = widget.prefs.profile;
   }
 
-  // Read data dari SQLite saat layar dibuka
-  Future<void> _loadProfileData() async {
-    final profile = await _dbHelper.getProfile();
-    if (profile != null) {
-      setState(() {
-        _currentId = profile.id;
-        _nameController.text = profile.name;
-        _roleController.text = profile.role;
-        _bioController.text = profile.bio;
-      });
-    }
+  // ---------- Reset Profil ----------
+  Future<void> _reset() async {
+    await widget.prefs.clearProfile();
+
+    if (!mounted) return;
+
     setState(() {
-      _isLoading = false;
+      _profile = widget.prefs.profile;
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profil dikembalikan ke bawaan'),
+      ),
+    );
   }
 
-  // Save / Update data ke SQLite
-  Future<void> _saveProfileData() async {
-    final profile = ProfileData(
-      id: _currentId,
-      name: _nameController.text,
-      role: _roleController.text,
-      bio: _bioController.text,
+  // ---------- Edit Profil ----------
+  Future<void> _edit() async {
+    final result = await Navigator.push<ProfileData>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfilePage(initial: _profile),
+      ),
     );
 
-    if (_currentId == null) {
-      await _dbHelper.insertProfile(profile);
-    } else {
-      await _dbHelper.updateProfile(profile);
-    }
+    if (result == null) return;
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil berhasil disimpan ke SQLite!')),
-      );
-    }
-    _loadProfileData();
+    await widget.prefs.saveProfile(result);
+
+    if (!mounted) return;
+
+    setState(() {
+      _profile = result;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profil tersimpan')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final initial = _profile.name.isNotEmpty
+        ? _profile.name[0].toUpperCase()
+        : '?';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kartu Profil Digital'),
         actions: [
-          // Switch Dark Mode dari PrefService
           IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
-            onPressed: () {
-              widget.onThemeChanged(!widget.isDarkMode);
-            },
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit profil',
+            onPressed: _edit,
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
                 children: [
-                  // Menampilkan info open count dari SharedPreferences
-                  Text(
-                    'Aplikasi dibuka: ${widget.prefService.openCount} kali',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: colors.primaryContainer,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(fontSize: 32),
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama',
-                      border: OutlineInputBorder(),
-                    ),
+                  Text(
+                    _profile.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
+                  const SizedBox(height: 4),
+                  Text(_profile.title),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _roleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Role / Jabatan',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _bioController,
-                    decoration: const InputDecoration(
-                      labelText: 'Bio',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _saveProfileData,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Simpan Ke SQLite'),
+                  Text(
+                    _profile.bio,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode),
+            title: const Text('Mode Gelap'),
+            value: widget.isDark,
+            onChanged: widget.onThemeChanged,
+          ),
+          const SizedBox(height: 24),
+          Column(
+            children: [
+              Text(
+                'Kartu ini sudah dibuka ${widget.prefs.openCount} kali',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _reset,
+                icon: const Icon(Icons.restore),
+                label: const Text('Reset Profil'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

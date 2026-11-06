@@ -1,43 +1,37 @@
 import 'dart:convert';
+import '../models/profile_data.dart';
 
 class ProfileData {
-  final int? id;
   final String name;
-  final String role;
+  final String title;
   final String bio;
 
-  ProfileData({
-    this.id,
+  const ProfileData({
     required this.name,
-    required this.role,
+    required this.title,
     required this.bio,
   });
 
-  // Mengubah data profil menjadi Map untuk SQLite
-  Map<String, dynamic> toMap() {
-    return {
-      if (id != null) 'id': id,
+  /// Data bawaan saat belum ada data tersimpan.
+  static const defaults = ProfileData(
+    name: 'Meida Forisagatha',
+    title: 'Teknik Informatika',
+    bio: 'halo.',
+  );
+  Map<String, dynamic> toMap() => {
       'name': name,
-      'role': role,
+      'title': title,
       'bio': bio,
     };
-  }
 
-  // Mengubah Map SQLite menjadi objek ProfileData
-  factory ProfileData.fromMap(Map<String, dynamic> map) {
-    return ProfileData(
-      id: map['id'] as int?,
-      name: map['name'] ?? '',
-      role: map['role'] ?? '',
-      bio: map['bio'] ?? '',
+factory ProfileData.fromMap(Map<String, dynamic> map) => ProfileData(
+      name: map['name'] as String? ?? defaults.name,
+      title: map['title'] as String? ?? defaults.title,
+      bio: map['bio'] as String? ?? defaults.bio,
     );
-  }
 
-  String toJson() => jsonEncode(toMap());
+String toJson() => jsonEncode(toMap());
 
-  factory ProfileData.fromJson(String source) {
-    return ProfileData.fromMap(
-      jsonDecode(source) as Map<String, dynamic>,
-    );
-  }
+factory ProfileData.fromJson(String source) =>
+    ProfileData.fromMap(jsonDecode(source) as Map<String, dynamic>);
 }

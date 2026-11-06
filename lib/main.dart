@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'pages/profile_page.dart';
 import 'services/pref_service.dart';
@@ -6,59 +5,60 @@ import 'services/pref_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final prefService = await PrefService.init();
-  await prefService.increaseOpenCount();
+  final prefs = await PrefService.init();
 
-  runApp(MyApp(prefService: prefService));
+  await prefs.increaseOpenCount();
+
+  runApp(MyApp(prefs: prefs));
 }
 
 class MyApp extends StatefulWidget {
-  final PrefService prefService;
+  const MyApp({super.key, required this.prefs});
 
-  const MyApp({super.key, required this.prefService});
+  final PrefService prefs;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late ThemeMode _themeMode;
+  late final ValueNotifier<bool> _isDark =
+      ValueNotifier<bool>(widget.prefs.isDarkMode);
 
-  @override
-  void initState() {
-    super.initState();
-    _themeMode = widget.prefService.isDarkMode
-        ? ThemeMode.dark
-        : ThemeMode.light;
+  void _changeTheme(bool value) {
+    _isDark.value = value;
+    widget.prefs.setDarkMode(value);
   }
 
-  Future<void> _changeTheme(bool isDark) async {
-    setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    });
-
-    await widget.prefService.setDarkMode(isDark);
+  @override
+  void dispose() {
+    _isDark.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Kartu Profil Digital',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.dark,
-      ),
-      themeMode: _themeMode,
-      home: ProfilePage(
-        prefService: widget.prefService,
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onThemeChanged: _changeTheme,
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isDark,
+      builder: (context, isDark, _) {
+        return MaterialApp(
+          title: 'Kartu Profil Digital',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorSchemeSeed: Colors.indigo,
+          ),
+          darkTheme: ThemeData(
+            colorSchemeSeed: Colors.indigo,
+            brightness: Brightness.dark,
+          ),
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+          home: ProfilePage(
+            prefs: widget.prefs,
+            isDark: isDark,
+            onThemeChanged: _changeTheme,
+          ),
+        );
+      },
     );
   }
 }

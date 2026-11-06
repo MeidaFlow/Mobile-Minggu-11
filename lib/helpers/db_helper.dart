@@ -43,10 +43,10 @@ class DatabaseHelper {
     );
   }
 
-  // Mengambil data profil terbaru
+  // Mengambil data profil terbaru (Perbaikan di baris ini)
   Future<ProfileData?> getProfile() async {
     final db = await database;
-    final List> maps = await db.query(
+    final List<Map<String, dynamic>> maps = await db.query(
       'profile',
       orderBy: 'id DESC',
       limit: 1,

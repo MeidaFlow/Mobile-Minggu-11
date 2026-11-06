@@ -1,11 +1,19 @@
+
 import 'package:flutter/material.dart';
 import '../models/profile_data.dart';
 import '../services/pref_service.dart';
 
 class ProfilePage extends StatelessWidget {
   final PrefService prefService;
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
 
-  ProfilePage({super.key, required this.prefService});
+  ProfilePage({
+    super.key,
+    required this.prefService,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  });
 
   final ProfileData profile = ProfileData(
     name: 'Meida',
@@ -63,6 +71,16 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
             const Text('Kartu ini sudah dibuka'),
+            const SizedBox(height: 20),
+            SwitchListTile(
+              title: const Text('Mode Gelap'),
+              subtitle: Text(
+                isDarkMode ? 'Dark Mode Aktif' : 'Light Mode Aktif',
+              ),
+              value: isDarkMode,
+              onChanged: onThemeChanged,
+              secondary: const Icon(Icons.dark_mode),
+            ),
           ],
         ),
       ),
